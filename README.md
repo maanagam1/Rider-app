@@ -1,9 +1,11 @@
-# ccccc-html
+# Ride Profit Tracker
 
-This repository contains a simple HTML project.
+A simple HTML app to track daily ride earnings, CNG, and tax/zone amounts.
 
 ## Files
 - ccccc.html
+- style.css
+- script.js
 
-## Usage
+## Use
 Open `ccccc.html` in any browser.
