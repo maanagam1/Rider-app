@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Cab Trip Tracker</title>
+    <!-- Tailwind CSS for Premium UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        .hide-on-pdf { display: block; }
+    </style>
+</head>
+<body class="text-gray-800 pb-12">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-4 shadow-lg sticky top-0 z-10">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold"><i class="fa-solid fa-taxi text-yellow-400 mr-2"></i> Cab Trip Tracker</h1>
+            <span class="text-xs bg-yellow-500 text-black px-2 py-1 rounded-full font-bold">PRO</span>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 space-y-6">
+        
+        <!-- Input Form Card -->
+        <div class="bg-white rounded-2xl shadow-md p-5 border border-gray-100 hide-on-pdf" id="formCard">
+            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2" id="formTitle">Nayi Ride Add Karein</h2>
+            <form id="tripForm" class="space-y-4">
+                <input type="hidden" id="editId">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1">Date</label>
+                        <input type="date" id="dateInput" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1">Platform</label>
+                        <select id="platformInput" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition">
+                            <option value="Uber">Uber</option>
+                            <option value="Rapido">Rapido</option>
+                            <option value="Ola">Ola</option>
+                            <option value="InDrive">InDrive</option>
+                            <option value="Personal">Personal/Other</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1">Ride Fare (₹)</label>
+                        <input type="number" id="earningInput" placeholder="0" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 outline-none transition" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1">CNG Kharcha (₹)</label>
+                        <input type="number" id="cngInput" placeholder="0" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-rose-500 outline-none transition" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-600 mb-1">State Tax / Zone (Included in Gross)</label>
+                    <select id="zoneInput" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        <option value="0">Koi Tax Nahi (₹0)</option>
+                        <option value="100">Delhi (₹100)</option>
+                        <option value="100_HR">Haryana (₹100)</option>
+                        <option value="120">UP (₹120)</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" class="flex-1 bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-xl shadow-md transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Save Trip
+                    </button>
+                    <button type="button" id="cancelBtn" class="hidden bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl shadow-md transition" onclick="resetForm()">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Print/PDF Area Starts Here -->
+        <div id="pdfArea" class="space-y-6 bg-transparent">
+            
+            <!-- Date Filter for Summary -->
+            <div class="bg-white rounded-2xl shadow-md p-5 border border-gray-100 flex justify-between items-center hide-on-pdf">
+                <span class="font-bold text-gray-700">Summary Date:</span>
+                <input type="date" id="summaryDate" class="border border-gray-300 rounded-lg p-2 text-sm font-semibold outline-none" onchange="renderData()">
+            </div>
+
+            <!-- Summary Card -->
+            <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-lg p-5 text-white relative overflow-hidden">
+                <div class="absolute top-0 right-0 opacity-10 text-9xl -mt-4 -mr-4"><i class="fa-solid fa-wallet"></i></div>
+                <h2 class="text-lg font-bold mb-4 flex items-center"><i class="fa-solid fa-receipt mr-2"></i> Aaj Ka Hisaab</h2>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4 relative z-10">
+                    <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-gray-700">
+                        <p class="text-gray-300 text-[10px] uppercase font-bold">Gross Earning (Ride+Zone)</p>
+                        <p class="text-2xl font-bold text-emerald-400">₹<span id="totEarning">0</span></p>
+                    </div>
+                    <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-gray-700">
+                        <p class="text-gray-300 text-[10px] uppercase font-bold">Net Profit</p>
+                        <p class="text-2xl font-bold text-yellow-400">₹<span id="netProfit">0</span></p>
+                    </div>
+                    <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-gray-700">
+                        <p class="text-gray-300 text-[10px] uppercase font-bold">Total CNG</p>
+                        <p class="text-lg font-bold text-rose-400">₹<span id="totCng">0</span></p>
+                    </div>
+                    <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-gray-700">
+                        <p class="text-gray-300 text-[10px] uppercase font-bold">Total Tax/Zone</p>
+                        <p class="text-lg font-bold text-orange-400">₹<span id="totZone">0</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trip List -->
+            <div>
+                <h3 class="text-md font-bold text-gray-700 mb-3 ml-1">Trip Details</h3>
+                <div id="tripList" class="space-y-3">
+                    <!-- Trips will be injected here via JS -->
+                </div>
+                <div id="noDataMsg" class="text-center text-gray-400 py-6 hidden">
+                    <i class="fa-solid fa-folder-open text-3xl mb-2"></i>
+                    <p>Aaj ki koi trip nahi hai</p>
+                </div>
+            </div>
+        </div>
+        <!-- Print/PDF Area Ends Here -->
+
+        <!-- Actions (Share & PDF) -->
+        <div class="grid grid-cols-2 gap-3 hide-on-pdf pt-4 border-t border-gray-300">
+            <button onclick="shareOnWhatsApp()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-md transition flex justify-center items-center">
+                <i class="fa-brands fa-whatsapp text-xl mr-2"></i> Share
+            </button>
+            <button onclick="downloadPDF()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-md transition flex justify-center items-center">
+                <i class="fa-solid fa-file-pdf text-xl mr-2"></i> PDF
+            </button>
+        </div>
+
+    </main>
+
+    <script>
+        // Set Default Date to Today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dateInput').value = today;
+        document.getElementById('summaryDate').value = today;
+
+        // Data Storage
+        let trips = JSON.parse(localStorage.getItem('cabTrips')) || [];
+
+        // DOM Elements
+        const tripForm = document.getElementById('tripForm');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const formTitle = document.getElementById('formTitle');
+
+        // Helper function for platform styling
+        function getPlatformBadge(platform) {
+            switch(platform) {
+                case 'Uber': return `<span class="bg-black text-white px-2 py-0.5 rounded text-xs font-bold border border-gray-600">UBER</span>`;
+                case 'Rapido': return `<span class="bg-yellow-400 text-black px-2 py-0.5 rounded text-xs font-bold border border-yellow-500">RAPIDO</span>`;
+                case 'Ola': return `<span class="bg-lime-500 text-white px-2 py-0.5 rounded text-xs font-bold border border-lime-600">OLA</span>`;
+                case 'InDrive': return `<span class="bg-green-600 text-white px-2 py-0.5 rounded text-xs font-bold border border-green-700">INDRIVE</span>`;
+                default: return `<span class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-xs font-bold border border-gray-300">OTHER</span>`;
+            }
+        }
+
+        // Form Submit Handler
+        tripForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('editId').value;
+            const date = document.getElementById('dateInput').value;
+            const platform = document.getElementById('platformInput').value;
+            const rideFare = parseFloat(document.getElementById('earningInput').value) || 0;
+            const cng = parseFloat(document.getElementById('cngInput').value) || 0;
+            
+            const zoneSelect = document.getElementById('zoneInput');
+            const zoneCost = zoneSelect.value === '100_HR' ? 100 : parseFloat(zoneSelect.value);
+            const zoneName = zoneSelect.options[zoneSelect.selectedIndex].text;
+
+            const tripData = {
+                id: id ? parseInt(id) : Date.now(),
+                date,
+                platform,
+                rideFare,
+                cng,
+                zoneCost,
+                zoneName
+            };
+
+            if (id) {
+                // Edit existing
+                const index = trips.findIndex(t => t.id === parseInt(id));
+                trips[index] = tripData;
+            } else {
+                // Add new
+                trips.push(tripData);
+            }
+
+            saveData();
+            resetForm();
+            renderData();
+        });
+
+        // Edit Trip
+        function editTrip(id) {
+            const trip = trips.find(t => t.id === id);
+            if(trip) {
+                document.getElementById('editId').value = trip.id;
+                document.getElementById('dateInput').value = trip.date;
+                document.getElementById('platformInput').value = trip.platform || 'Other';
+                document.getElementById('earningInput').value = trip.rideFare;
+                document.getElementById('cngInput').value = trip.cng;
+                
+                // Select proper zone
+                const zoneOptions = document.getElementById('zoneInput').options;
+                for(let i=0; i<zoneOptions.length; i++) {
+                    if(zoneOptions[i].text === trip.zoneName) {
+                        document.getElementById('zoneInput').selectedIndex = i;
+                        break;
+                    }
+                }
+
+                formTitle.innerText = "Ride Edit Karein";
+                cancelBtn.classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // Delete Trip
+        function deleteTrip(id) {
+            if(confirm("Kya aap sach me ye trip delete karna chahte hain?")) {
+                trips = trips.filter(t => t.id !== id);
+                saveData();
+                renderData();
+            }
+        }
+
+        // Reset Form
+        function resetForm() {
+            document.getElementById('editId').value = '';
+            document.getElementById('earningInput').value = '';
+            document.getElementById('cngInput').value = '';
+            document.getElementById('zoneInput').value = '0';
+            document.getElementById('platformInput').value = 'Uber';
+            formTitle.innerText = "Nayi Ride Add Karein";
+            cancelBtn.classList.add('hidden');
+        }
+
+        // Save to LocalStorage
+        function saveData() {
+            localStorage.setItem('cabTrips', JSON.stringify(trips));
+        }
+
+        // Render Summary and List
+        function renderData() {
+            const summaryDate = document.getElementById('summaryDate').value;
+            const filteredTrips = trips.filter(t => t.date === summaryDate);
+            
+            let totGrossEarning = 0, totCng = 0, totZone = 0;
+            let platformCounts = {};
+
+            const tripList = document.getElementById('tripList');
+            tripList.innerHTML = '';
+
+            if (filteredTrips.length === 0) {
+                document.getElementById('noDataMsg').classList.remove('hidden');
+            } else {
+                document.getElementById('noDataMsg').classList.add('hidden');
+                
+                filteredTrips.forEach((trip, index) => {
+                    // Calculation logic: Gross = Ride Fare + Zone Cost
+                    const grossForTrip = trip.rideFare + trip.zoneCost;
+                    
+                    totGrossEarning += grossForTrip;
+                    totCng += trip.cng;
+                    totZone += trip.zoneCost;
+
+                    // Platform tracking
+                    const plat = trip.platform || 'Other';
+                    platformCounts[plat] = (platformCounts[plat] || 0) + 1;
+
+                    const html = `
+                        <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 flex justify-between items-center">
+                            <div class="w-full">
+                                <div class="flex justify-between items-center mb-1">
+                                    <p class="font-bold text-gray-800">Trip #${index + 1} ${getPlatformBadge(plat)}</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 mt-2 text-sm bg-gray-50 p-2 rounded-lg">
+                                    <span class="text-emerald-700 font-semibold"><i class="fa-solid fa-arrow-trend-up"></i> Fare: ₹${trip.rideFare}</span>
+                                    <span class="text-orange-600 font-semibold"><i class="fa-solid fa-map-location-dot"></i> Zone: ₹${trip.zoneCost}</span>
+                                    <span class="text-gray-800 font-bold"><i class="fa-solid fa-sack-dollar"></i> Gross: ₹${grossForTrip}</span>
+                                    <span class="text-rose-600 font-semibold"><i class="fa-solid fa-gas-pump"></i> CNG: ₹${trip.cng}</span>
+                                </div>
+                                ${trip.zoneCost > 0 ? `<p class="text-xs text-gray-500 mt-1 italic">(${trip.zoneName})</p>` : ''}
+                            </div>
+                            <div class="flex flex-col space-y-2 ml-3 hide-on-pdf">
+                                <button onclick="editTrip(${trip.id})" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-100"><i class="fa-solid fa-pen text-sm"></i></button>
+                                <button onclick="deleteTrip(${trip.id})" class="text-red-500 bg-red-50 w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-100"><i class="fa-solid fa-trash text-sm"></i></button>
+                            </div>
+                        </div>
+                    `;
+                    tripList.insertAdjacentHTML('beforeend', html);
+                });
+            }
+
+            // Update Summary Cards
+            document.getElementById('totEarning').innerText = totGrossEarning;
+            document.getElementById('totCng').innerText = totCng;
+            document.getElementById('totZone').innerText = totZone;
+            
+            // Net profit = Gross Earning - CNG - Zone Tax
+            const netProfit = totGrossEarning - totCng - totZone;
+            document.getElementById('netProfit').innerText = netProfit;
+        }
+
+        // WhatsApp Sharing Function
+        function shareOnWhatsApp() {
+            const summaryDate = document.getElementById('summaryDate').value;
+            const totEarning = document.getElementById('totEarning').innerText;
+            const totCng = document.getElementById('totCng').innerText;
+            const totZone = document.getElementById('totZone').innerText;
+            const netProfit = document.getElementById('netProfit').innerText;
+
+            const filteredTrips = trips.filter(t => t.date === summaryDate);
+            const totalTrips = filteredTrips.length;
+
+            let platformStats = "";
+            let platformCounts = {};
+            filteredTrips.forEach(t => {
+                platformCounts[t.platform] = (platformCounts[t.platform] || 0) + 1;
+            });
+            for(let p in platformCounts) {
+                platformStats += `• ${p}: ${platformCounts[p]} Rides\n`;
+            }
+
+            let text = `*🚕 CAB HISAAAB - ${summaryDate}*\n\n`;
+            text += `*Rides Summary:*\nTotal Rides: ${totalTrips}\n${platformStats}\n`;
+            text += `-----------------------\n`;
+            text += `🟢 Gross Earning: ₹${totEarning} (Fare + Zone)\n`;
+            text += `🔴 CNG Kharcha: ₹${totCng}\n`;
+            text += `🟠 Zone Tax: ₹${totZone}\n`;
+            text += `-----------------------\n`;
+            text += `💰 *NET PROFIT: ₹${netProfit}*\n`;
+            text += `-----------------------\n`;
+            
+            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        // Download PDF Function
+        function downloadPDF() {
+            // Hide elements not needed in PDF
+            const hideElements = document.querySelectorAll('.hide-on-pdf');
+            hideElements.forEach(el => el.style.display = 'none');
+
+            const element = document.getElementById('pdfArea');
+            const summaryDate = document.getElementById('summaryDate').value;
+            
+            const opt = {
+                margin:       0.5,
+                filename:     `Cab_Summary_${summaryDate}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore hidden elements after PDF is generated
+                hideElements.forEach(el => el.style.display = '');
+            });
+        }
+
+        // Initial render
+        renderData();
+    </script>
+</body>
+</html>
